@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренажер: Великие географические открытия</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body {
+    margin: 0; padding: 20px; min-height: 100vh;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #fff; display: flex; justify-content: center; align-items: center;
+  }
+  .game-box {
+    background: #ffffff; color: #1e293b; width: 100%; max-width: 720px;
+    border-radius: 20px; padding: 28px; box-shadow: 0 20px 45px rgba(0,0,0,0.4);
+  }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .badge { background: #e0f2fe; color: #0369a1; padding: 6px 14px; border-radius: 99px; font-weight: bold; font-size: 14px; }
+  .progress-wrap { background: #e2e8f0; border-radius: 99px; height: 18px; overflow: hidden; margin-bottom: 24px; position: relative; }
+  .progress-bar {
+    height: 100%; width: 0%; background: linear-gradient(90deg, #0ea5e9, #10b981);
+    transition: width 0.4s ease; border-radius: 99px;
+  }
+  h2 { margin-top: 0; color: #0f172a; font-size: 22px; }
+  .options { display: grid; gap: 12px; margin-top: 18px; }
+  .btn {
+    background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 12px;
+    padding: 14px 18px; font-size: 16px; text-align: left; cursor: pointer;
+    transition: all 0.2s; font-weight: 500; color: #1e293b;
+  }
+  .btn:hover:not(:disabled) { border-color: #0ea5e9; background: #f0f9ff; transform: translateY(-2px); }
+  .btn.correct { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  .btn.wrong { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; }
+  .feedback {
+    margin-top: 18px; padding: 14px; border-radius: 12px; font-weight: 500;
+    display: none; line-height: 1.4;
+  }
+  .next-btn {
+    margin-top: 18px; background: #0284c7; color: #fff; border: none;
+    padding: 14px 24px; border-radius: 12px; font-size: 16px; font-weight: bold;
+    cursor: pointer; width: 100%; display: none;
+  }
+  .next-btn:hover { background: #0369a1; }
+  .match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .selected { border-color: #f59e0b !important; background: #fef3c7 !important; }
+</style>
+</head>
+<body>
+<div class="game-box" id="app">
+  <div class="header">
+    <span class="badge" id="stage-label">Этап 1: Морской тест</span>
+    <span class="badge" id="score-label">Баллы: 0</span>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progress"></div></div>
+  <div id="content"></div>
+</div>
+<script>
+const quizData = [
+  {
+    q: "1. Как называлась загадочная «Неведомая Южная земля», которую веками искали мореплаватели?",
+    opts: ["Терра аустралис инкогнита", "Атлантида Нового Света", "Земля Ван-Димена", "Арктика инкогнита"],
+    ans: 0,
+    info: "Верно! «Terra Australis Incognita» в переводе с латыни означает «Неведомая Южная земля»."
+  },
+  {
+    q: "2. Кто в 1642 году доказал наличие южного материка, пройдя вдоль его северного побережья, но голландцы держали это в секрете?",
+    opts: ["Джеймс Кук", "Абел Тасман", "Руал Амундсен", "Иван Крузенштерн"],
+    ans: 1,
+    info: "Точно! Голландец Абел Тасман первым доказал существование материка, а позже секрет раскрыл Джеймс Кук."
+  },
+  {
+    q: "3. Что обнаружил английский мореплаватель Джеймс Кук во время своей первой экспедиции?",
+    opts: ["Южный полюс", "Гавайские острова и Аляску", "Большой Барьерный риф и восточные берега Австралии", "Северный морской путь"],
+    ans: 2,
+    info: "Отлично! В первой экспедиции Кук исследовал восточные берега Австралии и открыл Большой Барьерный риф."
+  },
+  {
+    q: "4. Что помешало Джеймсу Куку открыть Антарктиду во время второй экспедиции?",
+    opts: ["Поломка корабля у берегов Африки", "Густые туманы и непроходимые льды", "Нехватка пресной воды на Гавайях", "Запрет английского короля"],
+    ans: 1,
+    info: "Именно так! Кук пытался продвинуться на юг, но встретил лишь густые туманы и льды."
+  },
+  {
+    q: "5. Какие территории были открыты и описаны в третьей экспедиции Джеймса Кука?",
+    opts: ["Остров Тасмания и мыс Горн", "Карское море и Новая Гвинея", "Гавайские острова и побережье Аляски", "Остров Маврикий и Южный полюс"],
+    ans: 2,
+    info: "Браво! В третьей экспедиции Кук открыл Гавайские острова и исследовал побережье Аляски."
+  }
+  ,
+  {
+    q: "6. Какая дата считается днём открытия последнего, шестого континента Земли — Антарктиды?",
+    opts: ["12 октября 1492 года", "28 января 1820 года", "14 декабря 1911 года", "6 апреля 1909 года"],
+    ans: 1,
+    info: "В яблочко! 28 января 1820 года русские моряки на шлюпах «Восток» и «Мирный» подошли к ледяной стене Антарктиды."
+  },
+  {
+    q: "7. Кто возглавлял первое русское кругосветное путешествие в 1803–1806 годах?",
+    opts: ["Ф.Ф. Беллинсгаузен и М.П. Лазарев", "И.Ф. Крузенштерн и Ю.Ф. Лисянский", "О.Ю. Шмидт и Р. Амундсен", "Р. Пири и Дж. Кук"],
+    ans: 1,
+    info: "Верно! Экспедиция на кораблях «Надежда» и «Нева» положила начало новой науке — океанологии."
+  },
+  {
+    q: "8. Какой главный научный труд составил И.Ф. Крузенштерн по итогам кругосветки?",
+    opts: ["«Атлас южных морей»", "«Путешествие к центру Земли»", "«Карта Северного пути»", "«Описание Терра Аустралис»"],
+    ans: 0,
+    info: "Точно! «Атлас южных морей» на долгие годы стал главным руководством для всех моряков."
+  },
+  {
+    q: "9. Кто первым в истории покорил Северный полюс в 1909 году, а кто — Южный полюс в 1911 году?",
+    opts: ["Р. Амундсен (Северный) и Р. Пири (Южный)", "Р. Пири (Северный) и Р. Амундсен (Южный)", "О.Ю. Шмидт (Северный) и М.П. Лазарев (Южный)", "Дж. Кук (Северный) и А. Тасман (Южный)"],
+    ans: 1,
+    info: "Супер! Американец Роберт Пири покорил Северный полюс на собачьих упряжках, а норвежец Руал Амундсен — Южный!"
+  },
+  {
+    q: "10. Почему начиная с 1959 года Антарктиду называют «материком мира»?",
+    opts: ["Там никогда не бывает штормов", "На ней размещены научные станции разных стран", "Там живут самые дружелюбные пингвины", "Она принадлежит сразу всем морякам мира"],
+    ans: 1,
+    info: "Отлично! На материке работают постоянные научные станции разных стран, изучающие климат Земли."
+  }
+];
+
+const bonusPool = [
+  {
+    q: "🔄 Доп. вопрос (Южная земля): На каком языке звучало старинное название «Терра аустралис инкогнита» и что оно означало?",
+    opts: ["На английском — «Земля кенгуру»", "На латыни — «Неведомая Южная земля»", "На голландском — «Остров туманов»", "На русском — «Ледяной край»"],
+    ans: 1,
+    info: "Верно! Это латинское выражение обозначало загадочный южный материк на старинных картах."
+  },
+  {
+    q: "🔄 Доп. вопрос (Абел Тасман): Вдоль какого побережья южного материка прошёл Абел Тасман в 1642 году?",
+    opts: ["Вдоль южного побережья", "Вдоль северного побережья", "Вдоль западного побережья", "Вокруг Южного полюса"],
+    ans: 1,
+    info: "Точно! Тасман прошёл вдоль всего северного побережья материка, но голландцы держали это в тайне."
+  },
+  {
+    q: "🔄 Доп. вопрос (1-я экспедиция Кука): Сколько примерно географических объектов на карте мира носят имя Джеймса Кука?",
+    opts: ["Всего 2 объекта", "Более 20 объектов", "Ни одного", "Ровно 100 объектов"],
+    ans: 1,
+    info: "Отлично! Имя Джеймса Кука носят более 20 географических объектов (проливы, острова, горы)."
+  },
+  {
+    q: "🔄 Доп. вопрос (2-я экспедиция Кука): Почему Джеймс Кук так и не смог увидеть берега Антарктиды во втором плавании?",
+    opts: ["Он свернул к берегам Аляски", "Путь на юг преградили густые туманы и льды", "Команда взбунтовалась на Тасмании", "У него закончились карты Тихого океана"],
+    ans: 1,
+    info: "Верно! Кук был очень близок к Антарктиде, но густые туманы и льды остановили его корабли."
+  },
+  {
+    q: "🔄 Доп. вопрос (3-я экспедиция Кука): Какой крупный полуостров Северной Америки исследовал Джеймс Кук в третьей экспедиции?",
+    opts: ["Камчатку", "Аляску", "Флориду", "Лабрадор"],
+    ans: 1,
+    info: "Браво! В третьем плавании Кук открыл Гавайские острова и исследовал побережье Аляски."
+  }
+];
+bonusPool.push(
+  {
+    q: "🔄 Доп. вопрос (Открытие Антарктиды): Какую главную преграду увидели моряки «Востока» и «Мирного» 28 января 1820 года?",
+    opts: ["Высокие песчаные дюны", "Сплошную ледяную стену южного материка", "Действующий вулкан у берега", "Огромный коралловый риф"],
+    ans: 1,
+    info: "Верно! Они приблизились к гигантской ледяной стене, которая преградила путь на юг."
+  },
+  {
+    q: "🔄 Доп. вопрос (Первая русская кругосветка): Через какой знаменитый мыс корабли «Надежда» и «Нева» вышли из Атлантического океана в Тихий?",
+    opts: ["Мыс Доброй Надежды", "Мыс Горн", "Мыс Дежнёва", "Мыс Челюскин"],
+    ans: 1,
+    info: "Точно! Пересекли Атлантику, обогнули мыс Горн и вышли в просторы Тихого океана."
+  },
+  {
+    q: "🔄 Доп. вопрос (Итоги кругосветки): Какой новой науке положило начало первое русское кругосветное плавание?",
+    opts: ["Астрономии", "Океанологии", "Вулканологии", "Метеорологии"],
+    ans: 1,
+    info: "Именно так! Измерение температур на глубинах, изучение течений и приливов дало старт океанологии."
+  },
+  {
+    q: "🔄 Доп. вопрос (Покорение полюсов): Какой транспорт помог Руалу Амундсену и его товарищам дойти до Южного полюса от берега?",
+    opts: ["Паровой трактор", "Сани, запряжённые собаками", "Аэростат", "Лыжи с парусом"],
+    ans: 1,
+    info: "Супер! Добравшись на «Фраме» до берега, Амундсен и четверо спутников пошли к полюсу на собачьих упряжках."
+  },
+  {
+    q: "🔄 Доп. вопрос (Современная Антарктида): На что в первую очередь влияет Антарктида, из-за чего её исследования так важны для всей планеты?",
+    opts: ["На морские течения в Арктике", "На климат даже далёких от неё частей Земли", "На скорость вращения Земли", "На высоту приливов в Северном море"],
+    ans: 1,
+    info: "Отлично! Ледяной материк оказывает огромное влияние на климат всей Земли."
+  }
+);
+
+const matchPairs = [
+  { ship: "Шлюпы «Восток» и «Мирный»", captain: "Беллинсгаузен и Лазарев" },
+  { ship: "Корабли «Надежда» и «Нева»", captain: "Крузенштерн и Лисянский" },
+  { ship: "Судно «Фрам»", captain: "Руал Амундсен" },
+  { ship: "Ледокол «Седов» (1930)", captain: "О.Ю. Шмидт" },
+  { ship: "Пароход «Сибиряков» (1932)", captain: "Прошёл Севморпуть за 1 навигацию" }
+];
+let step = 0, score = 0;
+let baseTotal = quizData.length + matchPairs.length;
+let activeQuiz = [...quizData];
+let remedialQueue = [];
+let isRemedialMode = false;
+
+function updateProgress() {
+  const currentTotal = baseTotal + remedialQueue.length;
+  const percent = Math.round((step / currentTotal) * 100);
+  document.getElementById("progress").style.width = percent + "%";
+  document.getElementById("score-label").textContent = "Баллы: " + score + " / " + currentTotal;
+}
+
+function renderQuiz() {
+  updateProgress();
+  if (step >= activeQuiz.length) {
+    if (!isRemedialMode) {
+      renderMatchGame();
+    } else {
+      showResult();
+    }
+    return;
+  }
+  const item = activeQuiz[step];
+  const content = document.getElementById("content");
+  content.innerHTML = `<h2>${item.q}</h2><div class="options" id="opts"></div>
+    <div class="feedback" id="fb"></div>
+    <button class="next-btn" id="next" onclick="renderQuiz()">Плыть дальше ⛵</button>`;
+  const optsDiv = document.getElementById("opts");
+  item.opts.forEach((optText, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "btn"; btn.textContent = optText;
+    btn.onclick = () => checkAnswer(idx, btn);
+    optsDiv.appendChild(btn);
+  });
+}
+
+function checkAnswer(idx, clickedBtn) {
+  const item = activeQuiz[step];
+  const allBtns = document.querySelectorAll("#opts .btn");
+  allBtns.forEach(b => b.disabled = true);
+  const fb = document.getElementById("fb");
+  fb.style.display = "block";
+  if (idx === item.ans) {
+    clickedBtn.classList.add("correct");
+    fb.style.background = "#dcfce7"; fb.style.color = "#14532d";
+    fb.textContent = "🎉 " + item.info;
+    score++;
+  } else {
+    clickedBtn.classList.add("wrong");
+    allBtns[item.ans].classList.add("correct");
+    fb.style.background = "#fee2e2"; fb.style.color = "#7f1d1d";
+    fb.textContent = "🧭 Мимо курса! " + item.info;
+    if (!isRemedialMode && bonusPool[step]) {
+      remedialQueue.push(bonusPool[step]);
+      fb.textContent += " (Добавлен смежный вопрос для закрепления!)";
+    }
+  }
+  step++;
+  updateProgress();
+  document.getElementById("next").style.display = "block";
+}
+let selShip = null, selCap = null, matchedCount = 0;
+
+function renderMatchGame() {
+  document.getElementById("stage-label").textContent = "Этап 2: Корабли и капитаны";
+  const content = document.getElementById("content");
+  const shuffledCaps = [...matchPairs].sort(() => Math.random() - 0.5);
+  content.innerHTML = `<h2>⚓ Соедини корабль с его капитаном или подвигом!</h2>
+    <p style="color:#475569;margin-top:-8px;">Нажми сначала на судно слева, а затем на подходящую пару справа.</p>
+    <div class="match-grid"><div id="ships" class="options"></div><div id="caps" class="options"></div></div>`;
+  matchPairs.forEach((p, i) => {
+    const b1 = document.createElement("button");
+    b1.className = "btn"; b1.textContent = p.ship;
+    b1.onclick = () => selectItem("ship", i, b1);
+    document.getElementById("ships").appendChild(b1);
+  });
+  shuffledCaps.forEach((p) => {
+    const origIdx = matchPairs.findIndex(x => x.ship === p.ship);
+    const b2 = document.createElement("button");
+    b2.className = "btn"; b2.textContent = p.captain;
+    b2.onclick = () => selectItem("cap", origIdx, b2);
+    document.getElementById("caps").appendChild(b2);
+  });
+}
+
+function selectItem(type, idx, btn) {
+  if (type === "ship") {
+    document.querySelectorAll("#ships .btn").forEach(b => b.classList.remove("selected"));
+    selShip = { idx, btn }; btn.classList.add("selected");
+  } else {
+    document.querySelectorAll("#caps .btn").forEach(b => b.classList.remove("selected"));
+    selCap = { idx, btn }; btn.classList.add("selected");
+  }
+  if (selShip && selCap) {
+    if (selShip.idx === selCap.idx) {
+      selShip.btn.classList.remove("selected"); selCap.btn.classList.remove("selected");
+      selShip.btn.classList.add("correct"); selCap.btn.classList.add("correct");
+      selShip.btn.disabled = true; selCap.btn.disabled = true;
+      score++; step++; matchedCount++; updateProgress();
+      if (matchedCount === matchPairs.length) setTimeout(checkRemedial, 700);
+    } else {
+      selShip.btn.classList.add("wrong"); selCap.btn.classList.add("wrong");
+      const s = selShip.btn, c = selCap.btn;
+      setTimeout(() => { s.classList.remove("wrong", "selected"); c.classList.remove("wrong", "selected"); }, 500);
+    }
+    selShip = null; selCap = null;
+  }
+}
+
+function checkRemedial() {
+  if (remedialQueue.length > 0) {
+    isRemedialMode = true;
+    activeQuiz = activeQuiz.concat(remedialQueue);
+    const badge = document.getElementById("stage-label");
+    badge.textContent = "Этап 3: Работа над ошибками 🔧";
+    badge.style.background = "#fef3c7"; badge.style.color = "#b45309";
+    renderQuiz();
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  const currentTotal = baseTotal + remedialQueue.length;
+  document.getElementById("stage-label").textContent = "Экспедиция завершена!";
+  const ratio = score / currentTotal;
+  let rank = ratio >= 0.85 ? "🏆 Адмирал Великих открытий!" : ratio >= 0.6 ? "🧭 Отважный капитан дальнего плавания!" : "⛵ Юнга-исследователь (стоит ещё раз заглянуть в судовой журнал!)";
+  let extraMsg = remedialQueue.length > 0 ? `<p style="color:#0369a1;">Пройдено доп. вопросов по ошибкам: <b>${remedialQueue.length}</b></p>` : `<p style="color:#15803d;">✨ Идеальное плавание без единой ошибки!</p>`;
+  document.getElementById("content").innerHTML = `<div style="text-align:center;padding:15px 0;">
+    <h2 style="font-size:26px;">${rank}</h2>
+    <p style="font-size:18px;color:#334155;">Твой итоговый результат: <b>${score} из ${currentTotal}</b> баллов!</p>${extraMsg}
+    <button class="next-btn" style="display:block;" onclick="location.reload()">Пройти экспедицию заново 🔄</button>
+  </div>`;
+}
+
+renderQuiz();
+</script>
+</body>
+</html>
